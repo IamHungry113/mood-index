@@ -103,10 +103,8 @@ const getColors = (color)=>{
 const Bar = ({pressed, value, delay, width, height})=>{
   if(height === 0)
     return (<View></View>)
-  console.log(height)
   const hei = value < 36 ? 36 : value
   const zoomAnim = useRef(new Animated.Value(0)).current;
-  const startHei =24 +  (122 - 24) * value / MAX_MODE_INDEX
   const larg = useRef(new Animated.Value(1000)).current;
   const show = useRef(new Animated.Value(0)).current;
   
