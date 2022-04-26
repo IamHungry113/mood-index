@@ -6,12 +6,13 @@
  * @flow strict-local
  */
 
-import React, {useState, useRef, useEffect} from 'react';
+import React, {useState, useLayoutEffect, useRef, useEffect} from 'react';
 import type {Node} from 'react';
 import Icon from 'react-native-vector-icons/AntDesign'
 import LinearGradient  from 'react-native-linear-gradient'
 import {
   Animated,
+  Easing,
   SafeAreaView,
   StatusBar,
   TouchableHighlight,
@@ -59,8 +60,7 @@ const Week = ({color, index, delay, pressed})=>{
         display: 'flex',
         flexDirection: 'column',
         alignItems: 'center',
-        marginTop: 8,
-        marginBottom: 8,
+        padding: 8,
     }}>
       <DelayedZoom delay={delay} speed={600} endScale={1} startScale={0}>
         <View style={{
@@ -100,34 +100,40 @@ const getColors = (color)=>{
     ])
   return colorMap.get(color) ?? [color, color, color]
 }
-const Bar = ({pressed, value, delay, width, height})=>{
-  if(height === 0)
-    return (<View></View>)
-  const hei = value < 36 ? 36 : value
+
+const Bar = ({pressed, value, delay, width})=>{
+  const hei = value === -1 ? 40 : value
   const zoomAnim = useRef(new Animated.Value(0)).current;
-  const larg = useRef(new Animated.Value(1000)).current;
+  const larg = useRef(new Animated.Value(300)).current;
   const show = useRef(new Animated.Value(0)).current;
-  
-  useEffect(() => {
-    Animated.sequence([
-        Animated.timing(zoomAnim, {
-          delay: delay,
-          toValue: 1,
-          duration: 600,
-          useNativeDriver: true,
-        }),
+  useLayoutEffect(()=>{
+      Animated.sequence([
         Animated.timing(larg, {
+          delay: delay,
           toValue: 0,
-          duration: 1000,
+          duration: 600,
+          easing: Easing.linear,
           useNativeDriver: true,
         }),
         Animated.timing(show, {
           toValue: 1,
           duration: 600,
           useNativeDriver: true,
-        })
-    ]).start()
-  }, []);
+        }),
+      ]).start()
+      Animated.timing(zoomAnim, {
+        delay: delay,
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start()
+      Animated.timing(zoomAnim, {
+        delay: delay,
+        toValue: 1,
+        duration: 600,
+        useNativeDriver: true,
+      }).start()
+  })
   return (
       <View
         style={{
@@ -165,9 +171,10 @@ const Bar = ({pressed, value, delay, width, height})=>{
             <Animated.Text style={{
               position: 'absolute',
               opacity: value === -1 ? 0 : show,
-              top: 4,
+              top: 8,
               zIndex: 1,
               color: 'white',
+              fontSize: 20,
               fontWeight: 'bold',
             }}>{value}</Animated.Text>
           </LinearGradient>
@@ -189,7 +196,7 @@ const Bar = ({pressed, value, delay, width, height})=>{
             justifyContent: 'center',
             alignItems: 'center',
           }}>
-            <Icon size={width - 12} color={'rgba(255, 255, 255, 0.9)'} name={getIcon(value)}></Icon>
+            <Icon size={width - 12} color={'rgba(255, 255, 255, 0.8)'} name={getIcon(value)}></Icon>
           </Animated.View>
         </Animated.View>
       </View>
@@ -197,14 +204,14 @@ const Bar = ({pressed, value, delay, width, height})=>{
 }
 
 
-const BarContainer = ({pressed,value, delay, index, width, height})=>{
+const BarContainer = ({pressed,value, delay, index, width})=>{
   return (
     <View style={{
         height: '100%',
         display: 'flex',
         flex: 1,
     }}>
-      <Bar pressed={pressed} value={value} delay={delay} index={index} width={width} height={height}></Bar>
+      <Bar pressed={pressed} value={value} delay={delay} index={index} width={width}></Bar>
       <Week color={getTextColor(value)} index={index} delay={delay} pressed={pressed} >
       </Week>
     </View>
@@ -251,6 +258,15 @@ const Item = ({value, index, delay})=>{
 
 
 const User = ({avarage, username})=>{
+  const fadeAnim = useRef(new Animated.Value(0)).current
+  useEffect(()=>{
+    Animated.timing(fadeAnim, {
+      toValue: 1,
+      duration: 500,
+      useNativeDriver: true,
+    }).start()
+  })
+  
   return (
       <View style={{
         backgroundColor: 'white',
@@ -263,9 +279,10 @@ const User = ({avarage, username})=>{
         borderBottomWidth: 2,
         borderBottomColor: 'rgba(0,0,0,0.01)',
       }}>
-          <View style={{
+          <Animated.View style={{
             display: 'flex',
             flexDirection: 'row',
+            opacity: fadeAnim,
             alignItems: 'center',
             height: 36,
             lineHeight: 36,
@@ -281,14 +298,16 @@ const User = ({avarage, username})=>{
               height: 24,
               lineHeight: 24,
             }}>{username}</Text>
-          </View>
-        <View style={{
+          </Animated.View>
+        <Animated.View style={{
+            opacity: fadeAnim,
           }}>
           <Text style={{
             fontSize: 56,
             fontWeight: 'bold',
             marginLeft: 'auto',
             marginRight: 'auto',
+            color: 'rgba(0,0,0,1)',
             marginTop: 8,
           }}>{avarage}</Text>
           <Text style={{
@@ -296,7 +315,7 @@ const User = ({avarage, username})=>{
             marginLeft: 'auto',
             marginRight: 'auto',
           }}>周平均心情指数</Text>
-        </View>
+        </Animated.View>
       </View>
   )
 }
@@ -319,7 +338,7 @@ const ProcessContent = ({values, curr})=>{
   }
   return (
     <View style={{
-      height: 248,
+      height: 300,
       padding: 2,
       backgroundColor: 'white',
     }}>
@@ -344,13 +363,8 @@ const ProcessContent = ({values, curr})=>{
 
 
 const App: () => Node = () => {
-  const values = Array(7).fill(null).map((_, index)=>{
-    if(index === 3)
-        return -1
-    return Math.floor(Math.random() * MAX_MODE_INDEX + 1)
-  })
-  const avarage = Math.round(values.reduce((a,b)=> (a === -1 ? 0 : a) + (b === -1 ? 0 : b)) / values.length)
-
+  const values = [86, 80, -1, 90, 92, 97, 81]
+  const avarage = 88
   return (
     <SafeAreaView style={{
       display: 'flex',
